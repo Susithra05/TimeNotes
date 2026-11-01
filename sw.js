@@ -1,4 +1,4 @@
-var CACHE = "timenotes-v1";
+var CACHE = "timenotes-v2";
 
 self.addEventListener("install", function (e) {
   e.waitUntil(

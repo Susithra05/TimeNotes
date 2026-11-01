@@ -3,169 +3,400 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#c2410c">
+<meta name="theme-color" content="#1a1816">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <title>My Time Notes</title>
 <style>
-:root { --bg:#faf8f4; --text:#2b2b2b; --muted:#8a857c; --line:#e6e1d8; --accent:#c2410c; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --bg:#1c1b19; --text:#e8e4dc; --muted:#8f8a80; --line:#34322e; --accent:#fb923c; }
-}
-:root[data-theme="dark"] { --bg:#1c1b19; --text:#e8e4dc; --muted:#8f8a80; --line:#34322e; --accent:#fb923c; }
-* { box-sizing: border-box; }
-body { margin:0; background:var(--bg); color:var(--text); font-family:ui-monospace,Menlo,Consolas,monospace; font-size:15px; }
-.wrap { max-width:640px; margin:0 auto; padding:16px 16px 110px; }
-.top { display:flex; justify-content:space-between; align-items:center; }
-.top h1 { font-size:16px; margin:0; }
-button { background:none; border:1px solid var(--line); color:var(--muted); font:inherit; font-size:12px; padding:4px 8px; border-radius:6px; cursor:pointer; }
-button:hover { color:var(--text); }
-.status { color:var(--muted); font-size:12px; margin:6px 0; }
-.login { display:none; border:1px solid var(--line); border-radius:8px; padding:10px; margin:8px 0; }
-.login input { width:100%; margin-bottom:6px; }
-.day { color:var(--muted); font-size:12px; margin:22px 0 6px; }
-.note { display:flex; gap:12px; padding:5px 0; border-bottom:1px solid var(--line); }
-.time { color:var(--muted); flex:none; }
-.text { flex:1; word-break:break-word; white-space:pre-wrap; }
-.tag { color:var(--accent); cursor:pointer; }
-.del { border:none; padding:0 4px; opacity:0.4; }
-input { background:none; border:1px solid var(--line); color:var(--text); font:inherit; padding:10px; border-radius:8px; outline:none; }
+:root { --bg:#1a1816; --surface:#24211e; --text:#ece7df; --muted:#968f84; --line:#35312c; --accent:#fb923c; --tl:68%; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font-size:1rem; line-height:1.45; }
+.wrap { max-width:680px; margin:0 auto; padding:16px 14px 190px; }
+header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:12px; }
+h1 { font-size:1.1rem; margin:0; }
+#clock { font-size:2rem; font-weight:700; color:var(--accent); line-height:1; }
+.muted { color:var(--muted); font-size:.8rem; }
+button, .btn { background:var(--surface); border:1px solid var(--line); color:var(--text); font:inherit; font-size:.8rem; padding:7px 11px; border-radius:10px; cursor:pointer; }
+button:hover, .btn:hover { border-color:var(--accent); }
+button.on { background:var(--accent); color:var(--bg); border-color:var(--accent); }
+input, select { background:var(--surface); border:1px solid var(--line); color:var(--text); font:inherit; padding:9px 11px; border-radius:10px; outline:none; color-scheme:dark; }
 input:focus { border-color:var(--accent); }
-.bar { position:fixed; left:0; right:0; bottom:0; background:var(--bg); border-top:1px solid var(--line); padding:10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); }
-.bar-inner { max-width:640px; margin:0 auto; display:flex; gap:8px; }
-.bar-inner input { flex:1; }
-.empty { color:var(--muted); margin-top:40px; text-align:center; }
+.tools { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+.tools #search { flex:1; min-width:140px; }
+.card { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px; margin:8px 0; }
+.card h3 { margin:12px 0 6px; font-size:.85rem; color:var(--muted); font-weight:600; }
+.card h3:first-child { margin-top:0; }
+.row { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin:4px 0; }
+.nag { background:var(--accent); color:var(--bg); padding:10px 12px; border-radius:12px; margin:8px 0; font-weight:600; display:flex; justify-content:space-between; align-items:center; }
+.day { color:var(--muted); font-size:.8rem; margin:18px 0 6px; font-weight:600; }
+.note { display:flex; flex-wrap:wrap; gap:4px 12px; padding:10px 12px; margin-bottom:6px; background:var(--surface); border:1px solid var(--line); border-radius:12px; }
+.note.pinned { border-left:3px solid var(--accent); }
+.note.sel, .note:hover { border-color:var(--muted); }
+.time { color:var(--muted); font-variant-numeric:tabular-nums; flex:none; }
+.text { flex:1; min-width:0; word-break:break-word; white-space:pre-wrap; }
+.acts { flex:none; display:flex; gap:2px; opacity:.45; }
+.note:hover .acts, .note.sel .acts { opacity:1; }
+.acts button { border:none; background:none; padding:2px 6px; font-size:.95rem; }
+.gap { display:none; width:100%; color:var(--accent); font-size:.75rem; padding-left:3.2rem; }
+.note:hover .gap, .note.sel .gap { display:block; }
+.note.edit { gap:8px; }
+.note.edit input { flex:1; min-width:140px; }
+.tag { cursor:pointer; font-weight:600; }
+.empty { color:var(--muted); text-align:center; margin-top:50px; }
+.bar { position:fixed; left:0; right:0; bottom:0; background:var(--bg); border-top:1px solid var(--line); padding:8px 14px calc(10px + env(safe-area-inset-bottom, 0px)); }
+.bar-in { max-width:680px; margin:0 auto; }
+.bar-in .row { margin:0 0 8px; }
+.chip { border-radius:999px; padding:5px 12px; }
+.main-in { display:flex; gap:8px; }
+.main-in input { flex:1; font-size:1.05rem; padding:13px 14px; border-radius:14px; }
+.main-in button { background:var(--accent); color:var(--bg); border-color:var(--accent); font-weight:700; padding:0 20px; border-radius:14px; font-size:.95rem; }
+.barline { display:flex; align-items:center; gap:8px; margin:5px 0; font-size:.85rem; }
+.barline .name { width:80px; flex:none; }
+.barline .fill { height:10px; border-radius:6px; }
+.cols { display:flex; gap:8px; align-items:flex-end; }
+.col { flex:1; text-align:center; }
+.stack { height:110px; display:flex; flex-direction:column-reverse; background:var(--bg); border-radius:8px; overflow:hidden; margin-bottom:4px; }
+.toast { position:fixed; left:50%; transform:translateX(-50%); bottom:150px; background:var(--text); color:var(--bg); padding:9px 16px; border-radius:20px; font-size:.85rem; display:none; z-index:5; }
+.toast button { margin-left:8px; padding:2px 8px; }
+@media (prefers-reduced-motion: no-preference) { .note, button { transition:border-color .15s; } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="top">
-    <h1>time notes</h1>
-    <div>
-      <button id="loginBtn">sign in</button>
-      <button id="exportBtn">copy text</button>
-      <button id="themeBtn">theme</button>
+  <header>
+    <div><h1>time notes</h1><div id="since" class="muted"></div></div>
+    <div id="clock"></div>
+  </header>
+
+  <div id="nag" class="nag" style="display:none"><span>⏰ what are you doing right now?</span><button id="nagBtn">stamp it</button></div>
+
+  <div class="tools">
+    <input id="search" placeholder="search all notes">
+    <input id="day" type="date">
+    <button id="todayBtn">today</button>
+    <button id="allBtn">all days</button>
+    <button id="starBtn">★ only</button>
+    <button data-panel="summary">summary</button>
+    <button data-panel="stats">week</button>
+    <button data-panel="settings">settings</button>
+  </div>
+  <div id="status" class="muted">local only</div>
+
+  <div class="card" id="p-summary" style="display:none"></div>
+  <div class="card" id="p-stats" style="display:none"></div>
+  <div class="card" id="p-settings" style="display:none">
+    <h3>theme</h3>
+    <div class="row" id="themeBtns"></div>
+    <div class="row">accent <input id="accent" type="color"> font
+      <select id="font"><option value="sans">clean sans</option><option value="mono">mono</option><option value="serif">serif</option></select>
+      size <input id="size" type="range" min="14" max="21">
     </div>
+    <h3>quick tags (comma separated)</h3>
+    <div class="row"><input id="quickTags" style="width:100%"></div>
+    <h3>gentle check-in (asks while the app is open)</h3>
+    <div class="row"><select id="checkin"><option value="0">off</option><option value="15">every 15 min</option><option value="30">every 30 min</option><option value="60">every hour</option></select></div>
+    <h3>your data</h3>
+    <div class="row"><button id="backupBtn">download backup</button><label class="btn">import backup<input id="importFile" type="file" accept=".json" hidden></label></div>
+    <h3>account &amp; sync</h3>
+    <div class="row"><input id="email" type="email" placeholder="email"><input id="password" type="password" placeholder="password"></div>
+    <div class="row"><button id="signInBtn">sign in</button><button id="signUpBtn">sign up</button><button id="signOutBtn">sign out</button></div>
+    <div id="authMsg" class="muted"></div>
   </div>
-  <div id="status" class="status">local only</div>
 
-  <div id="loginBox" class="login">
-    <input id="email" type="email" placeholder="email">
-    <input id="password" type="password" placeholder="password (min 6 chars)">
-    <button id="signInBtn">sign in</button>
-    <button id="signUpBtn">sign up (first time only)</button>
-    <div id="loginMsg" class="status"></div>
-  </div>
-
-  <div id="filter" class="status"></div>
+  <div id="filter" class="muted"></div>
   <div id="list"></div>
 </div>
 
-<div class="bar">
-  <div class="bar-inner">
-    <input id="box" type="text" placeholder="what's happening now? use #tags" autocomplete="off">
-    <button id="addBtn">add</button>
-  </div>
-</div>
+<div id="toast" class="toast"></div>
+<div class="bar"><div class="bar-in">
+  <div class="row" id="sugg"></div>
+  <div class="row" id="quick"></div>
+  <div class="main-in"><input id="box" placeholder="what's happening now? #tag" autocomplete="off"><button id="addBtn">stamp</button></div>
+</div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js"></script>
 <script>
-// 1. paste your Supabase details here
 var SUPABASE_URL = "https://arqomkufinzqowlcohon.supabase.co";
 var SUPABASE_KEY = "sb_publishable_5MzPFR2-AeyBoUSpt14Zjg_AOaRbxOE";
 
+var themes = {
+  ember:    { bg:"#1a1816", surface:"#24211e", text:"#ece7df", muted:"#968f84", line:"#35312c", accent:"#fb923c", tl:68 },
+  midnight: { bg:"#0f1220", surface:"#181c2e", text:"#e6e9f5", muted:"#8b92b0", line:"#262b45", accent:"#7c9cff", tl:70 },
+  forest:   { bg:"#0e1512", surface:"#16201b", text:"#e3ede6", muted:"#86a090", line:"#25342c", accent:"#5fd39a", tl:68 },
+  amoled:   { bg:"#000000", surface:"#0d0d0d", text:"#eeeeee", muted:"#888888", line:"#222222", accent:"#f472b6", tl:70 },
+  paper:    { bg:"#f6f3ee", surface:"#ffffff", text:"#2b2b2b", muted:"#8a857c", line:"#e4dfd5", accent:"#c2410c", tl:38 }
+};
+var fonts = {
+  sans: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif",
+  mono: "ui-monospace, Menlo, Consolas, monospace",
+  serif: "Georgia, 'Times New Roman', serif"
+};
+var cfg = { theme:"ember", accent:"", font:"sans", size:16, tags:"study, college, break, food", checkin:0 };
+
 var notes = [];
-var activeTag = "";
 var client = null;
 var user = null;
+var syncing = false;
+var liveStarted = false;
+var query = "";
+var onlyStar = false;
+var showAll = false;
+var editId = "";
+var openPanel = "";
+var lastNag = Date.now();
+var lastDeleted = "";
 
-// ---------- storage ----------
-function loadNotes() {
-  try {
-    var saved = localStorage.getItem("tn-notes");
-    if (saved) notes = JSON.parse(saved);
-  } catch (e) { notes = []; }
-}
-
-function saveNotes() {
-  localStorage.setItem("tn-notes", JSON.stringify(notes));
-}
-
-// ---------- helpers ----------
-function pad(n) {
-  if (n < 10) return "0" + n;
-  return "" + n;
-}
-
-function timeText(iso) {
+// ---------- small helpers ----------
+function pad(n) { if (n < 10) return "0" + n; return "" + n; }
+function dayKey(iso) {
   var d = new Date(iso);
-  return pad(d.getHours()) + ":" + pad(d.getMinutes());
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
 }
-
-function dayText(iso) {
-  var d = new Date(iso);
-  var label = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  if (d.toDateString() === new Date().toDateString()) return "today · " + label;
+var viewDay = dayKey(new Date().toISOString());
+function timeText(iso) { var d = new Date(iso); return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+function dayLabel(key) {
+  var label = new Date(key + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  if (key === dayKey(new Date().toISOString())) return "today · " + label;
   return label;
 }
-
+function fmt(mins) {
+  mins = Math.round(mins);
+  if (mins < 60) return mins + "m";
+  return Math.floor(mins / 60) + "h " + pad(mins % 60) + "m";
+}
+function localInput(iso) { return dayKey(iso) + "T" + timeText(iso); }
+function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+function firstTag(text) {
+  var m = text.match(/#(\w+)/);
+  if (m) return m[1].toLowerCase();
+  return "untagged";
+}
+function tagColor(tag) {
+  var h = 0;
+  for (var i = 0; i < tag.length; i++) h = (h * 31 + tag.charCodeAt(i)) % 360;
+  return "hsl(" + h + " 65% " + themes[cfg.theme].tl + "%)";
+}
 function makeHtml(text) {
-  var safe = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  return safe.replace(/#(\w+)/g, '<span class="tag" data-tag="$1">#$1</span>');
+  return esc(text).replace(/#(\w+)/g, function (all, tag) {
+    return '<span class="tag" style="color:' + tagColor(tag.toLowerCase()) + '" data-tag="' + tag + '">#' + tag + "</span>";
+  });
+}
+function liveNotes() {
+  var out = [];
+  for (var i = 0; i < notes.length; i++) if (!notes[i].deleted) out.push(notes[i]);
+  out.sort(function (a, b) { return a.created_at < b.created_at ? -1 : 1; });
+  return out;
+}
+function setStatus(msg) { document.getElementById("status").textContent = msg; }
+function toast(html) {
+  var t = document.getElementById("toast");
+  t.innerHTML = html;
+  t.style.display = "block";
+  setTimeout(function () { t.style.display = "none"; }, 3500);
 }
 
-function setStatus(msg) {
-  document.getElementById("status").textContent = msg;
+// ---------- storage ----------
+function saveNotes() { localStorage.setItem("tn-notes", JSON.stringify(notes)); }
+function saveCfg() { localStorage.setItem("tn-cfg", JSON.stringify(cfg)); }
+
+// ---------- look ----------
+function applyCfg() {
+  var t = themes[cfg.theme];
+  var r = document.documentElement.style;
+  r.setProperty("--bg", t.bg);
+  r.setProperty("--surface", t.surface);
+  r.setProperty("--text", t.text);
+  r.setProperty("--muted", t.muted);
+  r.setProperty("--line", t.line);
+  r.setProperty("--accent", cfg.accent || t.accent);
+  r.fontSize = cfg.size + "px";
+  document.body.style.fontFamily = fonts[cfg.font];
+  document.querySelector("meta[name=theme-color]").setAttribute("content", t.bg);
+  document.getElementById("accent").value = cfg.accent || t.accent;
+  var html = "";
+  for (var name in themes) {
+    html += '<button data-theme="' + name + '"' + (name === cfg.theme ? ' class="on"' : "") + ">" + name + "</button>";
+  }
+  document.getElementById("themeBtns").innerHTML = html;
+}
+
+// ---------- time maths ----------
+function dayTotals(key) {
+  var list = liveNotes();
+  var totals = {};
+  for (var i = 0; i < list.length; i++) {
+    if (dayKey(list[i].created_at) !== key) continue;
+    var start = new Date(list[i].created_at).getTime();
+    var end = 0;
+    if (i + 1 < list.length && dayKey(list[i + 1].created_at) === key) {
+      end = new Date(list[i + 1].created_at).getTime();
+    } else if (key === dayKey(new Date().toISOString())) {
+      end = Date.now();
+    }
+    if (end === 0) continue;
+    var tag = firstTag(list[i].text);
+    totals[tag] = (totals[tag] || 0) + (end - start) / 60000;
+  }
+  return totals;
+}
+
+function renderSummary() {
+  var totals = dayTotals(viewDay);
+  var names = Object.keys(totals).sort(function (a, b) { return totals[b] - totals[a]; });
+  var sum = 0;
+  var html = "<h3>" + dayLabel(viewDay) + "</h3>";
+  for (var i = 0; i < names.length; i++) sum += totals[names[i]];
+  for (var j = 0; j < names.length; j++) {
+    var w = Math.max(3, totals[names[j]] / sum * 100);
+    html += '<div class="barline"><span class="name">#' + names[j] + '</span><span class="fill" style="width:' + w * 0.55 + '%;background:' + tagColor(names[j]) + '"></span><span>' + fmt(totals[names[j]]) + "</span></div>";
+  }
+  if (names.length === 0) html += '<div class="muted">not enough notes yet to measure time.</div>';
+  else html += '<div class="muted">total tracked: ' + fmt(sum) + " (time counts to the next note; each note uses its first #tag)</div>";
+  document.getElementById("p-summary").innerHTML = html;
+}
+
+function renderStats() {
+  var days = [];
+  var legend = {};
+  var max = 1;
+  for (var i = 6; i >= 0; i--) {
+    var d = new Date();
+    d.setDate(d.getDate() - i);
+    var totals = dayTotals(dayKey(d.toISOString()));
+    var sum = 0;
+    for (var tg in totals) { sum += totals[tg]; legend[tg] = (legend[tg] || 0) + totals[tg]; }
+    if (sum > max) max = sum;
+    days.push({ label: d.toLocaleDateString("en-US", { weekday: "short" }), totals: totals, sum: sum });
+  }
+  var html = '<h3>last 7 days</h3><div class="cols">';
+  for (var j = 0; j < days.length; j++) {
+    html += '<div class="col"><div class="stack">';
+    for (var t in days[j].totals) {
+      html += '<div style="height:' + days[j].totals[t] / max * 100 + '%;background:' + tagColor(t) + '"></div>';
+    }
+    html += '</div><div class="muted">' + days[j].label + '</div><div class="muted">' + fmt(days[j].sum) + "</div></div>";
+  }
+  html += "</div><h3>by tag</h3>";
+  var names = Object.keys(legend).sort(function (a, b) { return legend[b] - legend[a]; });
+  for (var k = 0; k < names.length; k++) {
+    html += '<div class="barline"><span class="name">#' + names[k] + '</span><span style="color:' + tagColor(names[k]) + '">●</span><span>' + fmt(legend[names[k]]) + "</span></div>";
+  }
+  if (names.length === 0) html += '<div class="muted">no tracked time yet.</div>';
+  document.getElementById("p-stats").innerHTML = html;
 }
 
 // ---------- show notes ----------
 function render() {
+  var list = liveNotes();
   var html = "";
   var lastDay = "";
   var count = 0;
+  var prev = null;
+  var searching = query !== "";
 
-  for (var i = 0; i < notes.length; i++) {
-    var n = notes[i];
-    if (n.deleted) continue;
-    if (activeTag !== "" && n.text.toLowerCase().indexOf("#" + activeTag) === -1) continue;
+  for (var i = 0; i < list.length; i++) {
+    var n = list[i];
+    var key = dayKey(n.created_at);
+    var gap = -1;
+    if (prev) gap = (new Date(n.created_at) - new Date(prev.created_at)) / 60000;
+    prev = n;
+
+    if (!searching && !showAll && key !== viewDay) continue;
+    if (searching && n.text.toLowerCase().indexOf(query.toLowerCase()) === -1) continue;
+    if (onlyStar && !n.pinned) continue;
     count++;
-    var day = dayText(n.created_at);
-    if (day !== lastDay) {
-      html += '<div class="day">' + day + "</div>";
-      lastDay = day;
+
+    if (key !== lastDay && (showAll || searching)) {
+      html += '<div class="day">' + dayLabel(key) + "</div>";
+      lastDay = key;
     }
-    html += '<div class="note"><span class="time">' + timeText(n.created_at) + "</span>";
+    if (editId === n.id) {
+      html += '<div class="note edit"><input id="editText" value="' + esc(n.text) + '"><input id="editTime" type="datetime-local" value="' + localInput(n.created_at) + '">';
+      html += '<button data-save="' + n.id + '">save</button><button data-cancel="1">cancel</button></div>';
+      continue;
+    }
+    html += '<div class="note' + (n.pinned ? " pinned" : "") + '"><span class="time">' + timeText(n.created_at) + "</span>";
     html += '<span class="text">' + makeHtml(n.text) + "</span>";
-    html += '<button class="del" data-id="' + n.id + '">x</button></div>';
+    html += '<span class="acts"><button data-star="' + n.id + '">' + (n.pinned ? "★" : "☆") + '</button><button data-edit="' + n.id + '">✎</button><button data-del="' + n.id + '">✕</button></span>';
+    if (gap >= 0) html += '<div class="gap">' + fmt(gap) + " since the previous note</div>";
+    html += "</div>";
   }
 
-  if (count === 0) html = '<div class="empty">no notes yet. write one below.</div>';
+  if (count === 0) html = '<div class="empty">nothing here yet.<br>stamp what you are doing now ↓</div>';
+  if (!searching && !showAll) html = '<div class="day">' + dayLabel(viewDay) + "</div>" + html;
   document.getElementById("list").innerHTML = html;
 
-  var f = document.getElementById("filter");
-  if (activeTag !== "") f.innerHTML = "showing #" + activeTag + ' <button id="clearBtn">clear</button>';
-  else f.innerHTML = "";
+  var f = "";
+  if (searching) f = 'searching all days for "' + esc(query) + '"';
+  if (showAll && !searching) f = "showing all days";
+  document.getElementById("filter").textContent = f;
+  document.getElementById("starBtn").className = onlyStar ? "on" : "";
+  document.getElementById("allBtn").className = showAll ? "on" : "";
+  document.getElementById("day").value = viewDay;
+  if (openPanel === "summary") renderSummary();
+  if (openPanel === "stats") renderStats();
 }
 
-// ---------- add / delete ----------
+function renderQuick() {
+  var tags = cfg.tags.split(",");
+  var html = "";
+  for (var i = 0; i < tags.length; i++) {
+    var t = tags[i].trim().replace("#", "");
+    if (t !== "") html += '<button class="chip" data-q="' + esc(t) + '" style="color:' + tagColor(t.toLowerCase()) + '">#' + esc(t) + "</button>";
+  }
+  document.getElementById("quick").innerHTML = html;
+}
+
+function showSuggestions() {
+  var box = document.getElementById("box");
+  var m = box.value.match(/#(\w*)$/);
+  var out = document.getElementById("sugg");
+  if (!m) { out.innerHTML = ""; return; }
+  var seen = {};
+  var all = [];
+  var pool = cfg.tags.split(",");
+  for (var i = 0; i < notes.length; i++) {
+    var found = notes[i].text.match(/#(\w+)/g) || [];
+    for (var f = 0; f < found.length; f++) pool.push(found[f]);
+  }
+  for (var j = 0; j < pool.length; j++) {
+    var t = pool[j].trim().replace("#", "").toLowerCase();
+    if (t !== "" && !seen[t] && t.indexOf(m[1].toLowerCase()) === 0 && t !== m[1].toLowerCase()) {
+      seen[t] = true;
+      all.push(t);
+    }
+  }
+  var html = "";
+  for (var k = 0; k < all.length && k < 6; k++) html += '<button class="chip" data-sug="' + all[k] + '">#' + all[k] + "</button>";
+  out.innerHTML = html;
+}
+
+// ---------- add / edit / delete ----------
 function addNote() {
   var box = document.getElementById("box");
   var text = box.value.trim();
   if (text === "") return;
   var now = new Date().toISOString();
-  notes.push({ id: crypto.randomUUID(), text: text, created_at: now, updated_at: now, deleted: false, synced: false });
-  notes.sort(function (a, b) { return a.created_at < b.created_at ? -1 : 1; });
+  notes.push({ id: crypto.randomUUID(), text: text, created_at: now, updated_at: now, deleted: false, pinned: false, synced: false });
   saveNotes();
   box.value = "";
+  document.getElementById("sugg").innerHTML = "";
+  document.getElementById("nag").style.display = "none";
+  viewDay = dayKey(now);
+  showAll = false;
+  query = "";
+  document.getElementById("search").value = "";
   render();
-  window.scrollTo(0, document.body.scrollHeight);
+  tick();
+  toast("stamped " + timeText(now) + " ✓");
+  box.focus();
   sync();
 }
 
-function deleteNote(id) {
+function changeNote(id, changes) {
   for (var i = 0; i < notes.length; i++) {
     if (notes[i].id === id) {
-      notes[i].deleted = true;
+      for (var key in changes) notes[i][key] = changes[key];
       notes[i].updated_at = new Date().toISOString();
       notes[i].synced = false;
     }
@@ -175,149 +406,279 @@ function deleteNote(id) {
   sync();
 }
 
-// ---------- sync with supabase ----------
-async function sync() {
-  if (!client || !user) return;
-  if (!navigator.onLine) { setStatus("offline, will sync later"); return; }
+function saveEdit(id) {
+  var text = document.getElementById("editText").value.trim();
+  var when = document.getElementById("editTime").value;
+  if (text === "" || when === "") return;
+  editId = "";
+  changeNote(id, { text: text, created_at: new Date(when).toISOString() });
+}
 
-  // push notes that are not synced yet
-  var rows = [];
+function togglePin(id) {
   for (var i = 0; i < notes.length; i++) {
-    var n = notes[i];
-    if (!n.synced) {
-      rows.push({ id: n.id, text: n.text, created_at: n.created_at, updated_at: n.updated_at, deleted: n.deleted });
-    }
+    if (notes[i].id === id) changeNote(id, { pinned: !notes[i].pinned });
   }
-  if (rows.length > 0) {
-    var pushed = await client.from("notes").upsert(rows);
-    if (pushed.error) { setStatus("sync error: " + pushed.error.message); return; }
-    for (var j = 0; j < notes.length; j++) notes[j].synced = true;
-  }
+}
 
-  // pull notes that changed on the server
-  var lastPull = localStorage.getItem("tn-lastpull") || "1970-01-01T00:00:00Z";
-  var pulled = await client.from("notes").select("*").gt("updated_at", lastPull).order("updated_at");
-  if (pulled.error) { setStatus("sync error: " + pulled.error.message); return; }
+function deleteNote(id) {
+  lastDeleted = id;
+  changeNote(id, { deleted: true });
+  toast('deleted <button id="undoBtn">undo</button>');
+}
 
-  for (var k = 0; k < pulled.data.length; k++) {
-    var row = pulled.data[k];
-    var found = null;
-    for (var m = 0; m < notes.length; m++) {
-      if (notes[m].id === row.id) found = notes[m];
+// ---------- backup / import ----------
+function downloadBackup() {
+  var blob = new Blob([JSON.stringify(notes, null, 1)], { type: "application/json" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "timenotes-backup-" + dayKey(new Date().toISOString()) + ".json";
+  a.click();
+}
+
+function importBackup(file) {
+  var reader = new FileReader();
+  reader.onload = function () {
+    try {
+      var data = JSON.parse(reader.result);
+      var added = 0;
+      for (var i = 0; i < data.length; i++) {
+        var item = data[i];
+        if (!item.id || !item.text || !item.created_at) continue;
+        var exists = false;
+        for (var j = 0; j < notes.length; j++) if (notes[j].id === item.id) exists = true;
+        if (exists) continue;
+        notes.push({ id: item.id, text: item.text, created_at: item.created_at, updated_at: item.updated_at || item.created_at, deleted: !!item.deleted, pinned: !!item.pinned, synced: false });
+        added++;
+      }
+      saveNotes();
+      render();
+      toast("imported " + added + " notes");
+      sync();
+    } catch (e) {
+      toast("that file is not a valid backup");
     }
-    var newNote = { id: row.id, text: row.text, created_at: row.created_at, updated_at: row.updated_at, deleted: row.deleted, synced: true };
-    if (found === null) {
-      notes.push(newNote);
-    } else if (row.updated_at > found.updated_at) {
-      found.text = newNote.text;
-      found.deleted = newNote.deleted;
-      found.updated_at = newNote.updated_at;
-      found.synced = true;
-    }
-    lastPull = row.updated_at;
-  }
-  localStorage.setItem("tn-lastpull", lastPull);
+  };
+  reader.readAsText(file);
+}
 
-  notes.sort(function (a, b) { return a.created_at < b.created_at ? -1 : 1; });
-  saveNotes();
-  render();
-  setStatus("synced · " + user.email);
+// ---------- sync ----------
+async function sync() {
+  if (!client || !user || syncing) return;
+  if (!navigator.onLine) { setStatus("offline, will sync later"); return; }
+  syncing = true;
+  try {
+    var rows = [];
+    for (var i = 0; i < notes.length; i++) {
+      var n = notes[i];
+      if (!n.synced) rows.push({ id: n.id, text: n.text, created_at: n.created_at, updated_at: n.updated_at, deleted: n.deleted, pinned: !!n.pinned });
+    }
+    if (rows.length > 0) {
+      var pushed = await client.from("notes").upsert(rows);
+      if (pushed.error) { setStatus("sync error: " + pushed.error.message); return; }
+      for (var j = 0; j < notes.length; j++) notes[j].synced = true;
+    }
+    var lastPull = localStorage.getItem("tn-lastpull") || "1970-01-01T00:00:00Z";
+    var pulled = await client.from("notes").select("*").gt("updated_at", lastPull).order("updated_at");
+    if (pulled.error) { setStatus("sync error: " + pulled.error.message); return; }
+    for (var k = 0; k < pulled.data.length; k++) {
+      var row = pulled.data[k];
+      var found = null;
+      for (var m = 0; m < notes.length; m++) if (notes[m].id === row.id) found = notes[m];
+      if (found === null) {
+        notes.push({ id: row.id, text: row.text, created_at: row.created_at, updated_at: row.updated_at, deleted: row.deleted, pinned: !!row.pinned, synced: true });
+      } else if (row.updated_at > found.updated_at) {
+        found.text = row.text;
+        found.created_at = row.created_at;
+        found.deleted = row.deleted;
+        found.pinned = !!row.pinned;
+        found.updated_at = row.updated_at;
+        found.synced = true;
+      }
+      lastPull = row.updated_at;
+    }
+    localStorage.setItem("tn-lastpull", lastPull);
+    saveNotes();
+    render();
+    tick();
+    setStatus("synced · " + user.email);
+  } finally {
+    syncing = false;
+  }
+}
+
+function startLive() {
+  if (liveStarted) return;
+  liveStarted = true;
+  client.channel("notes-live").on("postgres_changes", { event: "*", schema: "public", table: "notes" }, function () {
+    setTimeout(sync, 300);
+  }).subscribe();
 }
 
 // ---------- login ----------
 async function signIn() {
-  var email = document.getElementById("email").value.trim();
-  var password = document.getElementById("password").value;
-  var res = await client.auth.signInWithPassword({ email: email, password: password });
-  if (res.error) { document.getElementById("loginMsg").textContent = res.error.message; return; }
+  var res = await client.auth.signInWithPassword({ email: document.getElementById("email").value.trim(), password: document.getElementById("password").value });
+  if (res.error) { document.getElementById("authMsg").textContent = res.error.message; return; }
   user = res.data.user;
-  document.getElementById("loginBox").style.display = "none";
-  document.getElementById("loginBtn").textContent = "sign out";
+  document.getElementById("authMsg").textContent = "signed in";
+  startLive();
   sync();
 }
-
 async function signUp() {
-  var email = document.getElementById("email").value.trim();
-  var password = document.getElementById("password").value;
-  var res = await client.auth.signUp({ email: email, password: password });
-  if (res.error) { document.getElementById("loginMsg").textContent = res.error.message; return; }
-  document.getElementById("loginMsg").textContent = "account created. check your email to confirm, then sign in.";
+  var res = await client.auth.signUp({ email: document.getElementById("email").value.trim(), password: document.getElementById("password").value });
+  if (res.error) { document.getElementById("authMsg").textContent = res.error.message; return; }
+  document.getElementById("authMsg").textContent = "account created. confirm the email, then sign in.";
+}
+async function signOut() {
+  if (!client) return;
+  await client.auth.signOut();
+  user = null;
+  setStatus("local only");
 }
 
-async function loginButton() {
-  if (user) {
-    await client.auth.signOut();
-    user = null;
-    document.getElementById("loginBtn").textContent = "sign in";
-    setStatus("local only");
-    return;
+// ---------- clock and gentle check-in ----------
+function tick() {
+  var now = new Date();
+  document.getElementById("clock").textContent = pad(now.getHours()) + ":" + pad(now.getMinutes());
+  var list = liveNotes();
+  var lastTime = 0;
+  if (list.length > 0) {
+    lastTime = new Date(list[list.length - 1].created_at).getTime();
+    var mins = (Date.now() - lastTime) / 60000;
+    document.getElementById("since").textContent = "last stamp " + (mins < 1 ? "just now" : fmt(mins) + " ago");
   }
-  var box = document.getElementById("loginBox");
-  if (box.style.display === "block") box.style.display = "none";
-  else box.style.display = "block";
-}
-
-// ---------- other buttons ----------
-function exportText() {
-  var out = "";
-  var lastDay = "";
-  for (var i = 0; i < notes.length; i++) {
-    if (notes[i].deleted) continue;
-    var day = dayText(notes[i].created_at);
-    if (day !== lastDay) { out += "\n" + day + "\n"; lastDay = day; }
-    out += timeText(notes[i].created_at) + "  " + notes[i].text + "\n";
+  if (cfg.checkin > 0 && Date.now() - Math.max(lastTime, lastNag) >= cfg.checkin * 60000) {
+    lastNag = Date.now();
+    document.getElementById("nag").style.display = "flex";
+    try {
+      if ("Notification" in window && Notification.permission === "granted") new Notification("time notes", { body: "what are you doing right now?" });
+    } catch (e) {}
   }
-  navigator.clipboard.writeText(out);
 }
 
-function changeTheme() {
-  var root = document.documentElement;
-  var next = "dark";
-  if (root.getAttribute("data-theme") === "dark") next = "light";
-  root.setAttribute("data-theme", next);
-  localStorage.setItem("tn-theme", next);
+// ---------- events ----------
+function showPanel(name) {
+  if (openPanel === name) openPanel = ""; else openPanel = name;
+  var names = ["summary", "stats", "settings"];
+  for (var i = 0; i < names.length; i++) {
+    document.getElementById("p-" + names[i]).style.display = (names[i] === openPanel) ? "block" : "none";
+  }
+  render();
 }
 
 document.getElementById("addBtn").addEventListener("click", addNote);
 document.getElementById("box").addEventListener("keydown", function (e) { if (e.key === "Enter") addNote(); });
-document.getElementById("exportBtn").addEventListener("click", exportText);
-document.getElementById("themeBtn").addEventListener("click", changeTheme);
-document.getElementById("loginBtn").addEventListener("click", loginButton);
-document.getElementById("signInBtn").addEventListener("click", signIn);
-document.getElementById("signUpBtn").addEventListener("click", signUp);
+document.getElementById("box").addEventListener("input", showSuggestions);
+document.getElementById("nagBtn").addEventListener("click", function () { document.getElementById("box").focus(); });
+document.getElementById("search").addEventListener("input", function (e) { query = e.target.value.trim(); render(); });
+document.getElementById("day").addEventListener("change", function (e) {
+  if (e.target.value === "") return;
+  viewDay = e.target.value;
+  showAll = false;
+  render();
+});
+document.getElementById("todayBtn").addEventListener("click", function () { viewDay = dayKey(new Date().toISOString()); showAll = false; render(); });
+document.getElementById("allBtn").addEventListener("click", function () { showAll = !showAll; render(); });
+document.getElementById("starBtn").addEventListener("click", function () { onlyStar = !onlyStar; render(); });
+document.getElementById("backupBtn").addEventListener("click", downloadBackup);
+document.getElementById("importFile").addEventListener("change", function (e) { if (e.target.files[0]) importBackup(e.target.files[0]); });
+document.getElementById("signInBtn").addEventListener("click", function () { if (client) signIn(); });
+document.getElementById("signUpBtn").addEventListener("click", function () { if (client) signUp(); });
+document.getElementById("signOutBtn").addEventListener("click", signOut);
+
+document.querySelector(".tools").addEventListener("click", function (e) {
+  if (e.target.dataset.panel) showPanel(e.target.dataset.panel);
+});
+
+document.getElementById("themeBtns").addEventListener("click", function (e) {
+  if (!e.target.dataset.theme) return;
+  cfg.theme = e.target.dataset.theme;
+  cfg.accent = "";
+  saveCfg(); applyCfg(); renderQuick(); render();
+});
+document.getElementById("accent").addEventListener("input", function (e) { cfg.accent = e.target.value; saveCfg(); applyCfg(); });
+document.getElementById("font").addEventListener("change", function (e) { cfg.font = e.target.value; saveCfg(); applyCfg(); });
+document.getElementById("size").addEventListener("input", function (e) { cfg.size = Number(e.target.value); saveCfg(); applyCfg(); });
+document.getElementById("quickTags").addEventListener("input", function (e) { cfg.tags = e.target.value; saveCfg(); renderQuick(); });
+document.getElementById("checkin").addEventListener("change", function (e) {
+  cfg.checkin = Number(e.target.value);
+  saveCfg();
+  lastNag = Date.now();
+  try { if (cfg.checkin > 0 && "Notification" in window) Notification.requestPermission(); } catch (err) {}
+});
+
+document.getElementById("quick").addEventListener("click", function (e) {
+  if (!e.target.dataset.q) return;
+  var box = document.getElementById("box");
+  if (box.value !== "" && box.value.slice(-1) !== " ") box.value += " ";
+  box.value += "#" + e.target.dataset.q + " ";
+  box.focus();
+});
+document.getElementById("sugg").addEventListener("click", function (e) {
+  if (!e.target.dataset.sug) return;
+  var box = document.getElementById("box");
+  box.value = box.value.replace(/#\w*$/, "#" + e.target.dataset.sug + " ");
+  document.getElementById("sugg").innerHTML = "";
+  box.focus();
+});
+document.getElementById("toast").addEventListener("click", function (e) {
+  if (e.target.id === "undoBtn" && lastDeleted !== "") {
+    changeNote(lastDeleted, { deleted: false });
+    lastDeleted = "";
+    document.getElementById("toast").style.display = "none";
+  }
+});
 
 document.getElementById("list").addEventListener("click", function (e) {
-  var tag = e.target.getAttribute("data-tag");
-  var id = e.target.getAttribute("data-id");
-  if (tag) { activeTag = tag.toLowerCase(); render(); }
-  if (id) deleteNote(id);
-});
-document.getElementById("filter").addEventListener("click", function (e) {
-  if (e.target.id === "clearBtn") { activeTag = ""; render(); }
+  var t = e.target;
+  if (t.dataset.tag) {
+    query = "#" + t.dataset.tag;
+    document.getElementById("search").value = query;
+    render();
+  } else if (t.dataset.star) togglePin(t.dataset.star);
+  else if (t.dataset.del) deleteNote(t.dataset.del);
+  else if (t.dataset.edit) { editId = t.dataset.edit; render(); document.getElementById("editText").focus(); }
+  else if (t.dataset.save) saveEdit(t.dataset.save);
+  else if (t.dataset.cancel) { editId = ""; render(); }
+  else {
+    var row = t.closest(".note");
+    if (row && !row.classList.contains("edit")) row.classList.toggle("sel");
+  }
 });
 
 window.addEventListener("online", sync);
-document.addEventListener("visibilitychange", function () { if (!document.hidden) sync(); });
-setInterval(sync, 30000);
+document.addEventListener("visibilitychange", function () { if (!document.hidden) { tick(); sync(); } });
+setInterval(sync, 60000);
+setInterval(tick, 15000);
 
 // ---------- start ----------
 async function start() {
-  var theme = localStorage.getItem("tn-theme");
-  if (theme) document.documentElement.setAttribute("data-theme", theme);
+  try {
+    var saved = localStorage.getItem("tn-notes");
+    if (saved) notes = JSON.parse(saved);
+    var savedCfg = localStorage.getItem("tn-cfg");
+    if (savedCfg) { var c = JSON.parse(savedCfg); for (var key in c) cfg[key] = c[key]; }
+  } catch (e) { notes = []; }
+  if (!themes[cfg.theme]) cfg.theme = "ember";
 
-  loadNotes();
+  document.getElementById("font").value = cfg.font;
+  document.getElementById("size").value = cfg.size;
+  document.getElementById("quickTags").value = cfg.tags;
+  document.getElementById("checkin").value = String(cfg.checkin);
+  applyCfg();
+  renderQuick();
   render();
+  tick();
+  document.getElementById("box").focus();
 
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
 
   var ready = typeof supabase !== "undefined" && SUPABASE_URL.indexOf("PASTE") === -1;
   if (!ready) return;
-
   client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   var session = await client.auth.getSession();
   if (session.data.session) {
     user = session.data.session.user;
-    document.getElementById("loginBtn").textContent = "sign out";
+    startLive();
     sync();
   }
 }
