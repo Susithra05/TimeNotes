@@ -58,6 +58,11 @@ input:focus { border-color:var(--accent); }
 .stack { height:110px; display:flex; flex-direction:column-reverse; background:var(--bg); border-radius:8px; overflow:hidden; margin-bottom:4px; }
 .toast { position:fixed; left:50%; transform:translateX(-50%); bottom:150px; background:var(--text); color:var(--bg); padding:9px 16px; border-radius:20px; font-size:.85rem; display:none; z-index:5; }
 .toast button { margin-left:8px; padding:2px 8px; }
+body.impmode { --accent:#a78bfa; }
+input[type=checkbox] { width:22px; height:22px; padding:0; margin:1px 0 0; flex:none; accent-color:var(--accent); cursor:pointer; }
+.note.imp.done .text { text-decoration:line-through; opacity:.5; }
+.action { width:100%; padding-left:34px; color:var(--muted); font-size:.85rem; }
+.action button { border:none; background:none; color:var(--accent); padding:0; }
 @media (prefers-reduced-motion: no-preference) { .note, button { transition:border-color .15s; } }
 </style>
 </head>
@@ -72,10 +77,12 @@ input:focus { border-color:var(--accent); }
 
   <div class="tools">
     <input id="search" placeholder="search all notes">
+    <button id="impBtn">💭 impulses</button>
     <input id="day" type="date">
     <button id="todayBtn">today</button>
     <button id="allBtn">all days</button>
     <button id="starBtn">★ only</button>
+    <button id="openBtn" style="display:none">open only</button>
     <button data-panel="summary">summary</button>
     <button data-panel="stats">week</button>
     <button data-panel="settings">settings</button>
@@ -145,6 +152,8 @@ var editId = "";
 var openPanel = "";
 var lastNag = Date.now();
 var lastDeleted = "";
+var mode = "notes";
+var onlyOpen = false;
 
 // ---------- small helpers ----------
 function pad(n) { if (n < 10) return "0" + n; return "" + n; }
@@ -183,7 +192,7 @@ function makeHtml(text) {
 }
 function liveNotes() {
   var out = [];
-  for (var i = 0; i < notes.length; i++) if (!notes[i].deleted) out.push(notes[i]);
+  for (var i = 0; i < notes.length; i++) if (!notes[i].deleted && notes[i].kind !== "impulse") out.push(notes[i]);
   out.sort(function (a, b) { return a.created_at < b.created_at ? -1 : 1; });
   return out;
 }
@@ -287,6 +296,8 @@ function renderStats() {
 
 // ---------- show notes ----------
 function render() {
+  updateImpBtn();
+  if (mode === "impulses") { renderImpulses(); return; }
   var list = liveNotes();
   var html = "";
   var lastDay = "";
@@ -337,6 +348,76 @@ function render() {
   if (openPanel === "stats") renderStats();
 }
 
+function impulseNotes() {
+  var out = [];
+  for (var i = 0; i < notes.length; i++) {
+    if (!notes[i].deleted && notes[i].kind === "impulse") out.push(notes[i]);
+  }
+  out.sort(function (a, b) { return a.created_at < b.created_at ? 1 : -1; });
+  return out;
+}
+
+function updateImpBtn() {
+  var list = impulseNotes();
+  var open = 0;
+  for (var i = 0; i < list.length; i++) if (!list[i].done) open++;
+  var btn = document.getElementById("impBtn");
+  btn.textContent = "💭 impulses" + (open > 0 ? " (" + open + ")" : "");
+  btn.className = mode === "impulses" ? "on" : "";
+}
+
+function renderImpulses() {
+  var list = impulseNotes();
+  var html = "";
+  var lastDay = "";
+  var count = 0;
+  for (var i = 0; i < list.length; i++) {
+    var n = list[i];
+    if (onlyOpen && n.done) continue;
+    if (query !== "" && (n.text + " " + (n.action || "")).toLowerCase().indexOf(query.toLowerCase()) === -1) continue;
+    count++;
+    var key = dayKey(n.created_at);
+    if (key !== lastDay) {
+      html += '<div class="day">' + dayLabel(key) + "</div>";
+      lastDay = key;
+    }
+    if (editId === n.id) {
+      html += '<div class="note edit"><input id="editText" value="' + esc(n.text) + '">';
+      html += '<input id="editAction" style="flex-basis:100%" placeholder="what I did about it (optional)" value="' + esc(n.action || "") + '">';
+      html += '<button data-save="' + n.id + '">save</button><button data-cancel="1">cancel</button></div>';
+      continue;
+    }
+    html += '<div class="note imp' + (n.done ? " done" : "") + '"><input type="checkbox" data-check="' + n.id + '"' + (n.done ? " checked" : "") + ">";
+    html += '<span class="time">' + timeText(n.created_at) + "</span>";
+    html += '<span class="text">' + makeHtml(n.text) + "</span>";
+    html += '<span class="acts"><button data-edit="' + n.id + '">✎</button><button data-del="' + n.id + '">✕</button></span>';
+    if (n.action) html += '<div class="action">→ ' + esc(n.action) + "</div>";
+    else if (n.done) html += '<div class="action"><button data-edit="' + n.id + '">+ add what I did</button></div>';
+    html += "</div>";
+  }
+  if (count === 0) html = '<div class="empty">no impulses parked.<br>when a distraction hits, jot it here and get back to your work ↓</div>';
+  document.getElementById("list").innerHTML = html;
+  var f = "impulse log: park it now, deal with it later";
+  if (onlyOpen) f += " · open only";
+  if (query !== "") f = 'searching impulses for "' + esc(query) + '"';
+  document.getElementById("filter").textContent = f;
+  document.getElementById("openBtn").className = onlyOpen ? "on" : "";
+}
+
+function toggleMode() {
+  if (mode === "notes") mode = "impulses"; else mode = "notes";
+  editId = "";
+  var inImp = mode === "impulses";
+  document.body.className = inImp ? "impmode" : "";
+  document.getElementById("box").placeholder = inImp ? "distracted? jot the impulse, then get back to it" : "what's happening now? #tag";
+  document.getElementById("addBtn").textContent = inImp ? "park it" : "stamp";
+  var noteOnly = ["day", "todayBtn", "allBtn", "starBtn", "quick", "sugg"];
+  for (var i = 0; i < noteOnly.length; i++) document.getElementById(noteOnly[i]).style.display = inImp ? "none" : "";
+  document.getElementById("openBtn").style.display = inImp ? "" : "none";
+  render();
+  document.getElementById("box").focus();
+}
+
 function renderQuick() {
   var tags = cfg.tags.split(",");
   var html = "";
@@ -377,6 +458,16 @@ function addNote() {
   var text = box.value.trim();
   if (text === "") return;
   var now = new Date().toISOString();
+  if (mode === "impulses") {
+    notes.push({ id: crypto.randomUUID(), text: text, created_at: now, updated_at: now, deleted: false, pinned: false, kind: "impulse", done: false, action: "", synced: false });
+    saveNotes();
+    box.value = "";
+    render();
+    toast("parked ✓ now back to it");
+    box.focus();
+    sync();
+    return;
+  }
   notes.push({ id: crypto.randomUUID(), text: text, created_at: now, updated_at: now, deleted: false, pinned: false, synced: false });
   saveNotes();
   box.value = "";
@@ -408,8 +499,15 @@ function changeNote(id, changes) {
 
 function saveEdit(id) {
   var text = document.getElementById("editText").value.trim();
+  if (text === "") return;
+  var actionBox = document.getElementById("editAction");
+  if (actionBox) {
+    editId = "";
+    changeNote(id, { text: text, action: actionBox.value.trim() });
+    return;
+  }
   var when = document.getElementById("editTime").value;
-  if (text === "" || when === "") return;
+  if (when === "") return;
   editId = "";
   changeNote(id, { text: text, created_at: new Date(when).toISOString() });
 }
@@ -447,7 +545,7 @@ function importBackup(file) {
         var exists = false;
         for (var j = 0; j < notes.length; j++) if (notes[j].id === item.id) exists = true;
         if (exists) continue;
-        notes.push({ id: item.id, text: item.text, created_at: item.created_at, updated_at: item.updated_at || item.created_at, deleted: !!item.deleted, pinned: !!item.pinned, synced: false });
+        notes.push({ id: item.id, text: item.text, created_at: item.created_at, updated_at: item.updated_at || item.created_at, deleted: !!item.deleted, pinned: !!item.pinned, kind: item.kind || "note", done: !!item.done, action: item.action || "", synced: false });
         added++;
       }
       saveNotes();
@@ -470,7 +568,7 @@ async function sync() {
     var rows = [];
     for (var i = 0; i < notes.length; i++) {
       var n = notes[i];
-      if (!n.synced) rows.push({ id: n.id, text: n.text, created_at: n.created_at, updated_at: n.updated_at, deleted: n.deleted, pinned: !!n.pinned });
+      if (!n.synced) rows.push({ id: n.id, text: n.text, created_at: n.created_at, updated_at: n.updated_at, deleted: n.deleted, pinned: !!n.pinned, kind: n.kind || "note", done: !!n.done, action: n.action || "" });
     }
     if (rows.length > 0) {
       var pushed = await client.from("notes").upsert(rows);
@@ -485,12 +583,14 @@ async function sync() {
       var found = null;
       for (var m = 0; m < notes.length; m++) if (notes[m].id === row.id) found = notes[m];
       if (found === null) {
-        notes.push({ id: row.id, text: row.text, created_at: row.created_at, updated_at: row.updated_at, deleted: row.deleted, pinned: !!row.pinned, synced: true });
+        notes.push({ id: row.id, text: row.text, created_at: row.created_at, updated_at: row.updated_at, deleted: row.deleted, pinned: !!row.pinned, kind: row.kind || "note", done: !!row.done, action: row.action || "", synced: true });
       } else if (row.updated_at > found.updated_at) {
         found.text = row.text;
         found.created_at = row.created_at;
         found.deleted = row.deleted;
         found.pinned = !!row.pinned;
+        found.done = !!row.done;
+        found.action = row.action || "";
         found.updated_at = row.updated_at;
         found.synced = true;
       }
@@ -580,6 +680,14 @@ document.getElementById("todayBtn").addEventListener("click", function () { view
 document.getElementById("allBtn").addEventListener("click", function () { showAll = !showAll; render(); });
 document.getElementById("starBtn").addEventListener("click", function () { onlyStar = !onlyStar; render(); });
 document.getElementById("backupBtn").addEventListener("click", downloadBackup);
+document.getElementById("impBtn").addEventListener("click", toggleMode);
+document.getElementById("openBtn").addEventListener("click", function () { onlyOpen = !onlyOpen; render(); });
+document.getElementById("list").addEventListener("keydown", function (e) {
+  if (e.key === "Enter" && (e.target.id === "editText" || e.target.id === "editAction" || e.target.id === "editTime")) {
+    var saveBtn = document.querySelector("[data-save]");
+    if (saveBtn) saveBtn.click();
+  }
+});
 document.getElementById("importFile").addEventListener("change", function (e) { if (e.target.files[0]) importBackup(e.target.files[0]); });
 document.getElementById("signInBtn").addEventListener("click", function () { if (client) signIn(); });
 document.getElementById("signUpBtn").addEventListener("click", function () { if (client) signUp(); });
@@ -635,6 +743,7 @@ document.getElementById("list").addEventListener("click", function (e) {
     document.getElementById("search").value = query;
     render();
   } else if (t.dataset.star) togglePin(t.dataset.star);
+  else if (t.dataset.check) changeNote(t.dataset.check, { done: t.checked });
   else if (t.dataset.del) deleteNote(t.dataset.del);
   else if (t.dataset.edit) { editId = t.dataset.edit; render(); document.getElementById("editText").focus(); }
   else if (t.dataset.save) saveEdit(t.dataset.save);
