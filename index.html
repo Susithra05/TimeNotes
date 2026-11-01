@@ -233,18 +233,12 @@ function applyCfg() {
 function dayTotals(key) {
   var list = liveNotes();
   var totals = {};
-  for (var i = 0; i < list.length; i++) {
+  for (var i = 1; i < list.length; i++) {
     if (dayKey(list[i].created_at) !== key) continue;
-    var start = new Date(list[i].created_at).getTime();
-    var end = 0;
-    if (i + 1 < list.length && dayKey(list[i + 1].created_at) === key) {
-      end = new Date(list[i + 1].created_at).getTime();
-    } else if (key === dayKey(new Date().toISOString())) {
-      end = Date.now();
-    }
-    if (end === 0) continue;
+    if (dayKey(list[i - 1].created_at) !== key) continue;
+    var mins = (new Date(list[i].created_at) - new Date(list[i - 1].created_at)) / 60000;
     var tag = firstTag(list[i].text);
-    totals[tag] = (totals[tag] || 0) + (end - start) / 60000;
+    totals[tag] = (totals[tag] || 0) + mins;
   }
   return totals;
 }
@@ -260,7 +254,7 @@ function renderSummary() {
     html += '<div class="barline"><span class="name">#' + names[j] + '</span><span class="fill" style="width:' + w * 0.55 + '%;background:' + tagColor(names[j]) + '"></span><span>' + fmt(totals[names[j]]) + "</span></div>";
   }
   if (names.length === 0) html += '<div class="muted">not enough notes yet to measure time.</div>';
-  else html += '<div class="muted">total tracked: ' + fmt(sum) + " (time counts to the next note; each note uses its first #tag)</div>";
+  else html += '<div class="muted">total tracked: ' + fmt(sum) + " (each note gets the time since the previous note, under its first #tag. the first note of a day has no start time, so it is not counted)</div>";
   document.getElementById("p-summary").innerHTML = html;
 }
 
