@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#c2410c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<title>My Time Notes</title>
+<style>
+:root { --bg:#faf8f4; --text:#2b2b2b; --muted:#8a857c; --line:#e6e1d8; --accent:#c2410c; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg:#1c1b19; --text:#e8e4dc; --muted:#8f8a80; --line:#34322e; --accent:#fb923c; }
+}
+:root[data-theme="dark"] { --bg:#1c1b19; --text:#e8e4dc; --muted:#8f8a80; --line:#34322e; --accent:#fb923c; }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font-family:ui-monospace,Menlo,Consolas,monospace; font-size:15px; }
+.wrap { max-width:640px; margin:0 auto; padding:16px 16px 110px; }
+.top { display:flex; justify-content:space-between; align-items:center; }
+.top h1 { font-size:16px; margin:0; }
+button { background:none; border:1px solid var(--line); color:var(--muted); font:inherit; font-size:12px; padding:4px 8px; border-radius:6px; cursor:pointer; }
+button:hover { color:var(--text); }
+.status { color:var(--muted); font-size:12px; margin:6px 0; }
+.login { display:none; border:1px solid var(--line); border-radius:8px; padding:10px; margin:8px 0; }
+.login input { width:100%; margin-bottom:6px; }
+.day { color:var(--muted); font-size:12px; margin:22px 0 6px; }
+.note { display:flex; gap:12px; padding:5px 0; border-bottom:1px solid var(--line); }
+.time { color:var(--muted); flex:none; }
+.text { flex:1; word-break:break-word; white-space:pre-wrap; }
+.tag { color:var(--accent); cursor:pointer; }
+.del { border:none; padding:0 4px; opacity:0.4; }
+input { background:none; border:1px solid var(--line); color:var(--text); font:inherit; padding:10px; border-radius:8px; outline:none; }
+input:focus { border-color:var(--accent); }
+.bar { position:fixed; left:0; right:0; bottom:0; background:var(--bg); border-top:1px solid var(--line); padding:10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); }
+.bar-inner { max-width:640px; margin:0 auto; display:flex; gap:8px; }
+.bar-inner input { flex:1; }
+.empty { color:var(--muted); margin-top:40px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>time notes</h1>
+    <div>
+      <button id="loginBtn">sign in</button>
+      <button id="exportBtn">copy text</button>
+      <button id="themeBtn">theme</button>
+    </div>
+  </div>
+  <div id="status" class="status">local only</div>
+
+  <div id="loginBox" class="login">
+    <input id="email" type="email" placeholder="email">
+    <input id="password" type="password" placeholder="password (min 6 chars)">
+    <button id="signInBtn">sign in</button>
+    <button id="signUpBtn">sign up (first time only)</button>
+    <div id="loginMsg" class="status"></div>
+  </div>
+
+  <div id="filter" class="status"></div>
+  <div id="list"></div>
+</div>
+
+<div class="bar">
+  <div class="bar-inner">
+    <input id="box" type="text" placeholder="what's happening now? use #tags" autocomplete="off">
+    <button id="addBtn">add</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js"></script>
+<script>
+// 1. paste your Supabase details here
+var SUPABASE_URL = "https://arqomkufinzqowlcohon.supabase.co/rest/v1/";
+var SUPABASE_KEY = "sb_publishable_5MzPFR2-AeyBoUSpt14Zjg_AOaRbxOE";
+
+var notes = [];
+var activeTag = "";
+var client = null;
+var user = null;
+
+// ---------- storage ----------
+function loadNotes() {
+  try {
+    var saved = localStorage.getItem("tn-notes");
+    if (saved) notes = JSON.parse(saved);
+  } catch (e) { notes = []; }
+}
+
+function saveNotes() {
+  localStorage.setItem("tn-notes", JSON.stringify(notes));
+}
+
+// ---------- helpers ----------
+function pad(n) {
+  if (n < 10) return "0" + n;
+  return "" + n;
+}
+
+function timeText(iso) {
+  var d = new Date(iso);
+  return pad(d.getHours()) + ":" + pad(d.getMinutes());
+}
+
+function dayText(iso) {
+  var d = new Date(iso);
+  var label = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  if (d.toDateString() === new Date().toDateString()) return "today · " + label;
+  return label;
+}
+
+function makeHtml(text) {
+  var safe = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return safe.replace(/#(\w+)/g, '<span class="tag" data-tag="$1">#$1</span>');
+}
+
+function setStatus(msg) {
+  document.getElementById("status").textContent = msg;
+}
+
+// ---------- show notes ----------
+function render() {
+  var html = "";
+  var lastDay = "";
+  var count = 0;
+
+  for (var i = 0; i < notes.length; i++) {
+    var n = notes[i];
+    if (n.deleted) continue;
+    if (activeTag !== "" && n.text.toLowerCase().indexOf("#" + activeTag) === -1) continue;
+    count++;
+    var day = dayText(n.created_at);
+    if (day !== lastDay) {
+      html += '<div class="day">' + day + "</div>";
+      lastDay = day;
+    }
+    html += '<div class="note"><span class="time">' + timeText(n.created_at) + "</span>";
+    html += '<span class="text">' + makeHtml(n.text) + "</span>";
+    html += '<button class="del" data-id="' + n.id + '">x</button></div>';
+  }
+
+  if (count === 0) html = '<div class="empty">no notes yet. write one below.</div>';
+  document.getElementById("list").innerHTML = html;
+
+  var f = document.getElementById("filter");
+  if (activeTag !== "") f.innerHTML = "showing #" + activeTag + ' <button id="clearBtn">clear</button>';
+  else f.innerHTML = "";
+}
+
+// ---------- add / delete ----------
+function addNote() {
+  var box = document.getElementById("box");
+  var text = box.value.trim();
+  if (text === "") return;
+  var now = new Date().toISOString();
+  notes.push({ id: crypto.randomUUID(), text: text, created_at: now, updated_at: now, deleted: false, synced: false });
+  notes.sort(function (a, b) { return a.created_at < b.created_at ? -1 : 1; });
+  saveNotes();
+  box.value = "";
+  render();
+  window.scrollTo(0, document.body.scrollHeight);
+  sync();
+}
+
+function deleteNote(id) {
+  for (var i = 0; i < notes.length; i++) {
+    if (notes[i].id === id) {
+      notes[i].deleted = true;
+      notes[i].updated_at = new Date().toISOString();
+      notes[i].synced = false;
+    }
+  }
+  saveNotes();
+  render();
+  sync();
+}
+
+// ---------- sync with supabase ----------
+async function sync() {
+  if (!client || !user) return;
+  if (!navigator.onLine) { setStatus("offline, will sync later"); return; }
+
+  // push notes that are not synced yet
+  var rows = [];
+  for (var i = 0; i < notes.length; i++) {
+    var n = notes[i];
+    if (!n.synced) {
+      rows.push({ id: n.id, text: n.text, created_at: n.created_at, updated_at: n.updated_at, deleted: n.deleted });
+    }
+  }
+  if (rows.length > 0) {
+    var pushed = await client.from("notes").upsert(rows);
+    if (pushed.error) { setStatus("sync error: " + pushed.error.message); return; }
+    for (var j = 0; j < notes.length; j++) notes[j].synced = true;
+  }
+
+  // pull notes that changed on the server
+  var lastPull = localStorage.getItem("tn-lastpull") || "1970-01-01T00:00:00Z";
+  var pulled = await client.from("notes").select("*").gt("updated_at", lastPull).order("updated_at");
+  if (pulled.error) { setStatus("sync error: " + pulled.error.message); return; }
+
+  for (var k = 0; k < pulled.data.length; k++) {
+    var row = pulled.data[k];
+    var found = null;
+    for (var m = 0; m < notes.length; m++) {
+      if (notes[m].id === row.id) found = notes[m];
+    }
+    var newNote = { id: row.id, text: row.text, created_at: row.created_at, updated_at: row.updated_at, deleted: row.deleted, synced: true };
+    if (found === null) {
+      notes.push(newNote);
+    } else if (row.updated_at > found.updated_at) {
+      found.text = newNote.text;
+      found.deleted = newNote.deleted;
+      found.updated_at = newNote.updated_at;
+      found.synced = true;
+    }
+    lastPull = row.updated_at;
+  }
+  localStorage.setItem("tn-lastpull", lastPull);
+
+  notes.sort(function (a, b) { return a.created_at < b.created_at ? -1 : 1; });
+  saveNotes();
+  render();
+  setStatus("synced · " + user.email);
+}
+
+// ---------- login ----------
+async function signIn() {
+  var email = document.getElementById("email").value.trim();
+  var password = document.getElementById("password").value;
+  var res = await client.auth.signInWithPassword({ email: email, password: password });
+  if (res.error) { document.getElementById("loginMsg").textContent = res.error.message; return; }
+  user = res.data.user;
+  document.getElementById("loginBox").style.display = "none";
+  document.getElementById("loginBtn").textContent = "sign out";
+  sync();
+}
+
+async function signUp() {
+  var email = document.getElementById("email").value.trim();
+  var password = document.getElementById("password").value;
+  var res = await client.auth.signUp({ email: email, password: password });
+  if (res.error) { document.getElementById("loginMsg").textContent = res.error.message; return; }
+  document.getElementById("loginMsg").textContent = "account created. check your email to confirm, then sign in.";
+}
+
+async function loginButton() {
+  if (user) {
+    await client.auth.signOut();
+    user = null;
+    document.getElementById("loginBtn").textContent = "sign in";
+    setStatus("local only");
+    return;
+  }
+  var box = document.getElementById("loginBox");
+  if (box.style.display === "block") box.style.display = "none";
+  else box.style.display = "block";
+}
+
+// ---------- other buttons ----------
+function exportText() {
+  var out = "";
+  var lastDay = "";
+  for (var i = 0; i < notes.length; i++) {
+    if (notes[i].deleted) continue;
+    var day = dayText(notes[i].created_at);
+    if (day !== lastDay) { out += "\n" + day + "\n"; lastDay = day; }
+    out += timeText(notes[i].created_at) + "  " + notes[i].text + "\n";
+  }
+  navigator.clipboard.writeText(out);
+}
+
+function changeTheme() {
+  var root = document.documentElement;
+  var next = "dark";
+  if (root.getAttribute("data-theme") === "dark") next = "light";
+  root.setAttribute("data-theme", next);
+  localStorage.setItem("tn-theme", next);
+}
+
+document.getElementById("addBtn").addEventListener("click", addNote);
+document.getElementById("box").addEventListener("keydown", function (e) { if (e.key === "Enter") addNote(); });
+document.getElementById("exportBtn").addEventListener("click", exportText);
+document.getElementById("themeBtn").addEventListener("click", changeTheme);
+document.getElementById("loginBtn").addEventListener("click", loginButton);
+document.getElementById("signInBtn").addEventListener("click", signIn);
+document.getElementById("signUpBtn").addEventListener("click", signUp);
+
+document.getElementById("list").addEventListener("click", function (e) {
+  var tag = e.target.getAttribute("data-tag");
+  var id = e.target.getAttribute("data-id");
+  if (tag) { activeTag = tag.toLowerCase(); render(); }
+  if (id) deleteNote(id);
+});
+document.getElementById("filter").addEventListener("click", function (e) {
+  if (e.target.id === "clearBtn") { activeTag = ""; render(); }
+});
+
+window.addEventListener("online", sync);
+document.addEventListener("visibilitychange", function () { if (!document.hidden) sync(); });
+setInterval(sync, 30000);
+
+// ---------- start ----------
+async function start() {
+  var theme = localStorage.getItem("tn-theme");
+  if (theme) document.documentElement.setAttribute("data-theme", theme);
+
+  loadNotes();
+  render();
+
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+
+  var ready = typeof supabase !== "undefined" && SUPABASE_URL.indexOf("PASTE") === -1;
+  if (!ready) return;
+
+  client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  var session = await client.auth.getSession();
+  if (session.data.session) {
+    user = session.data.session.user;
+    document.getElementById("loginBtn").textContent = "sign out";
+    sync();
+  }
+}
+start();
+</script>
+</body>
+</html>
